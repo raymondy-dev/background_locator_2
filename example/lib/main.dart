@@ -22,6 +22,7 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> {
+  Timer tRestart;
   ReceivePort port = ReceivePort();
 
   String logStr = '';
@@ -58,7 +59,8 @@ class _MyAppState extends State<MyApp> {
   Future<void> updateUI(dynamic data) async {
     final log = await FileManager.readLogFile();
 
-    LocationDto locationDto = (data != null) ? LocationDto.fromJson(data) : null;
+    LocationDto locationDto =
+        (data != null) ? LocationDto.fromJson(data) : null;
     await _updateNotificationText(locationDto);
 
     setState(() {
@@ -112,6 +114,15 @@ class _MyAppState extends State<MyApp> {
         },
       ),
     );
+    final autoRestart = SizedBox(
+      width: double.maxFinite,
+      child: ElevatedButton(
+        child: Text('Auto Restart'),
+        onPressed: () {
+          onRestart();
+        },
+      ),
+    );
     final clear = SizedBox(
       width: double.maxFinite,
       child: ElevatedButton(
@@ -149,7 +160,7 @@ class _MyAppState extends State<MyApp> {
           child: SingleChildScrollView(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.center,
-              children: <Widget>[start, stop, clear, status, log],
+              children: <Widget>[start, stop, autoRestart, clear, status, log],
             ),
           ),
         ),
@@ -157,7 +168,7 @@ class _MyAppState extends State<MyApp> {
     );
   }
 
-  void onStop() async {
+  Future<void> onStop() async {
     await BackgroundLocator.unRegisterLocationUpdate();
     final _isRunning = await BackgroundLocator.isServiceRunning();
     setState(() {
@@ -165,7 +176,7 @@ class _MyAppState extends State<MyApp> {
     });
   }
 
-  void _onStart() async {
+  Future<void> _onStart() async {
     if (await _checkLocationPermission()) {
       await _startLocator();
       final _isRunning = await BackgroundLocator.isServiceRunning();
@@ -177,6 +188,16 @@ class _MyAppState extends State<MyApp> {
     } else {
       // show error
     }
+  }
+
+  void onRestart() async {
+    tRestart?.cancel();
+    tRestart = Timer.periodic(const Duration(seconds: 5), (t) async {
+      await Future.wait([
+        onStop(),
+        _onStart(),
+      ]);
+    });
   }
 
   Future<bool> _checkLocationPermission() async {
@@ -203,17 +224,17 @@ class _MyAppState extends State<MyApp> {
     }
   }
 
-  Future<void> _startLocator() async{
+  Future<void> _startLocator() async {
     Map<String, dynamic> data = {'countInit': 1};
-    return await BackgroundLocator.registerLocationUpdate(LocationCallbackHandler.callback,
+    return await BackgroundLocator.registerLocationUpdate(
+        LocationCallbackHandler.callback,
         initCallback: LocationCallbackHandler.initCallback,
         initDataCallback: data,
         disposeCallback: LocationCallbackHandler.disposeCallback,
         iosSettings: IOSSettings(
             accuracy: LocationAccuracy.NAVIGATION,
             distanceFilter: 0,
-            stopWithTerminate: true
-        ),
+            stopWithTerminate: true),
         autoStop: false,
         androidSettings: AndroidSettings(
             accuracy: LocationAccuracy.NAVIGATION,

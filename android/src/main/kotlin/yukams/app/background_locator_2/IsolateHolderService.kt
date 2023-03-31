@@ -4,13 +4,10 @@ import android.app.*
 import android.Manifest
 import android.content.Context
 import android.content.Intent
-import android.os.Build
-import android.os.Handler
-import android.os.IBinder
-import android.os.PowerManager
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import android.content.pm.PackageManager
+import android.os.*
 import io.flutter.FlutterInjector
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.BinaryMessenger
@@ -22,6 +19,7 @@ import yukams.app.background_locator_2.pluggables.Pluggable
 import yukams.app.background_locator_2.provider.*
 import java.util.HashMap
 import androidx.core.app.ActivityCompat
+import java.util.concurrent.atomic.AtomicBoolean
 
 class IsolateHolderService : MethodChannel.MethodCallHandler, LocationUpdateListener, Service() {
     companion object {
@@ -96,9 +94,11 @@ class IsolateHolderService : MethodChannel.MethodCallHandler, LocationUpdateList
         val notification = getNotification()
         startForeground(notificationId, notification)
 
-        pluggables.forEach {
-            context?.let { it1 -> it.onServiceStart(it1) }
-        }
+        Handler(Looper.getMainLooper()).postDelayed({
+            pluggables.forEach {
+                context?.let { it1 -> it.onServiceStart(it1) }
+            }
+        }, 1000)
     }
 
     private fun getNotification(): Notification {
@@ -167,7 +167,8 @@ class IsolateHolderService : MethodChannel.MethodCallHandler, LocationUpdateList
                 }
             }
             ACTION_UPDATE_NOTIFICATION == intent?.action -> {
-                if (isServiceRunning) {
+                val serviceStarted = AtomicBoolean(isServiceRunning)
+                synchronized (serviceStarted) {
                     updateNotification(intent)
                 }
             }
