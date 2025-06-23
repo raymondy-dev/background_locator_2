@@ -8,7 +8,7 @@ import java.util.HashMap
 
 class LocationParserUtil {
     companion object {
-        fun getLocationMapFromLocation(location: Location): HashMap<Any, Any?> {
+        fun getLocationMapFromLocation(location: Location): HashMap<Any, Any> {
             var speedAccuracy = 0f
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 speedAccuracy = location.speedAccuracyMetersPerSecond
@@ -28,7 +28,7 @@ class LocationParserUtil {
                     Keys.ARG_SPEED_ACCURACY to speedAccuracy,
                     Keys.ARG_HEADING to location.bearing,
                     Keys.ARG_TIME to location.time.toDouble(),
-                    Keys.ARG_PROVIDER to location.provider,
+                    Keys.ARG_PROVIDER to (location.provider ?: ""),
             )
         }
 
